@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 
 app = Flask(__name__)
-CORS(app)  # ✅ Enable Cross-Origin Resource Sharing
+CORS(app)  # Enable CORS for frontend access
 
 # Render PostgreSQL connection
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://aircraft_data_user:6PZIW63RoeCj5cthsEPTZaCeSZm2ZQEQ@dpg-d1t092emcj7s73b0mhlg-a.oregon-postgres.render.com/aircraft_data"
@@ -36,7 +36,7 @@ class AircraftData(db.Model):
     spi = db.Column(db.Boolean)
     position_source = db.Column(db.Integer)
     category = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)  # Renamed from 'timestamp'
 
 @app.route('/')
 def home():
@@ -45,13 +45,13 @@ def home():
 @app.route('/aircrafts', methods=['GET'])
 def get_aircrafts():
     try:
-        # ✅ Fetch from OpenSky Network API
+        # Fetch live data from OpenSky Network
         response = requests.get("https://opensky-network.org/api/states/all", timeout=5)
         response.raise_for_status()
         data = response.json()
 
         aircrafts = []
-        for state in data.get("states", [])[:10]:  # Limit to 10 for performance
+        for state in data.get("states", [])[:10]:  # Limit to 10 entries
             aircrafts.append({
                 'icao24': state[0],
                 'callsign': state[1],
@@ -68,9 +68,9 @@ def get_aircrafts():
     except Exception as e:
         print("OpenSky fetch failed, using database. Reason:", str(e))
 
-        # 🔁 Fallback to DB
-        aircrafts = AircraftData.query.order_by(AircraftData.timestamp.desc()).limit(10).all()
-        data = [ {
+        # Fallback to database
+        aircrafts = AircraftData.query.order_by(AircraftData.recorded_at.desc()).limit(10).all()
+        data = [{
             'icao24': a.icao24,
             'callsign': a.callsign,
             'origin_country': a.origin_country,
@@ -80,9 +80,9 @@ def get_aircrafts():
             'geo_altitude': a.geo_altitude,
             'velocity': a.velocity,
             'on_ground': a.on_ground
-        } for a in aircrafts ]
+        } for a in aircrafts]
         return jsonify({'source': 'database', 'aircrafts': data})
 
-# 🟢 Only needed for local development. Gunicorn uses "app" directly.
+# Local dev entry point; use Gunicorn for production
 if __name__ == '__main__':
     app.run(debug=True)
