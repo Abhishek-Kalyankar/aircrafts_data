@@ -35,7 +35,7 @@ class AircraftData(db.Model):
     squawk = db.Column(db.String(10))
     spi = db.Column(db.Boolean)
     position_source = db.Column(db.Integer)
-    category = db.Column(db.Integer)
+    #category = db.Column(db.Integer)
     recorded_at = db.Column(db.DateTime, default=datetime.utcnow)  # Renamed from 'timestamp'
 
 @app.route('/')
